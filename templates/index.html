@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генерация тестовых данных</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function showAlert(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        }
+
+        function generateRandomData() {
+            return Math.random().toString(36).substr(2, 8);
+        }
+
+        function translateToLatin(text) {
+            const map = {
+                'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y',
+                'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F',
+                'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ы': 'Y', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya', 'Ь': '',
+                'Ъ': '', 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i',
+                'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ы': 'y', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+                'ь': '', 'ъ': ''
+            };
+            return text.split('').map(char => map[char] || char).join('');
+        }
+
+        function fillUserNames(phone) {
+            fetch(`/get_user?phone=${phone}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        document.getElementById('cardholder_firstname').value = translateToLatin(data.first_name);
+                        document.getElementById('cardholder_lastname').value = translateToLatin(data.last_name);
+                    }
+                });
+        }
+
+        function generateUser() {
+            const formData = new FormData(document.getElementById('user-form'));
+            fetch('/generate_user', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('user-result').innerText = JSON.stringify(data, null, 2);
+            });
+        }
+
+        function generateCard() {
+            const phone = document.getElementById('phone-card').value;
+            const cardType = document.getElementById('card_type').value;
+            const expirationDate = document.getElementById('expiration_date').value;
+            const cvv = document.getElementById('cvv').value;
+            const cardholderFirstName = document.getElementById('cardholder_firstname').value;
+            const cardholderLastName = document.getElementById('cardholder_lastname').value;
+            const cardCategory = document.getElementById('card_category').value;
+            const cardStatus = document.getElementById('card_status').value;
+            const currency = document.getElementById('currency').value;
+            const cardLimit = document.getElementById('card_limit').value;
+            const cardBalance = document.getElementById('card_balance').value;
+            const lastUsageDate = document.getElementById('last_usage_date').value;
+
+            if (!cardType || !expirationDate || !cvv || !cardholderFirstName || !cardholderLastName || !cardCategory || !cardStatus || !currency || !cardBalance) {
+                showAlert('Вы заполнили не все поля, продолжить с авто генерацией?', () => {
+                    if (!expirationDate) document.getElementById('expiration_date').value = new Date().toISOString().split('T')[0];
+                    if (!cvv) document.getElementById('cvv').value = Math.floor(100 + Math.random() * 900).toString();
+                    if (!cardholderFirstName) document.getElementById('cardholder_firstname').value = translateToLatin('Иван');
+                    if (!cardholderLastName) document.getElementById('cardholder_lastname').value = translateToLatin('Иванов');
+                    if (!cardLimit) document.getElementById('card_limit').value = '10000';
+                    if (!cardBalance) document.getElementById('card_balance').value = '5000';
+                    if (!lastUsageDate) document.getElementById('last_usage_date').value = new Date().toISOString().split('T')[0];
+                });
+            } else {
+                const formData = new FormData(document.getElementById('card-form'));
+                fetch('/generate_card', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('card-result').innerText = JSON.stringify(data, null, 2);
+                });
+            }
+        }
+
+        function generateTransaction() {
+            const formData = new FormData(document.getElementById('transaction-form'));
+            fetch('/generate_transaction', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('transaction-result').innerText = JSON.stringify(data, null, 2);
+            });
+        }
+
+        function generateAll() {
+            fetch('/generate_all', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('all-result').innerText = JSON.stringify(data, null, 2);
+            });
+        }
+
+        function autoGenerate(fieldId) {
+            switch (fieldId) {
+                case 'expiration_date':
+                    document.getElementById(fieldId).value = new Date(new Date().setFullYear(new Date().getFullYear() + 3)).toISOString().split('T')[0];
+                    break;
+                case 'cvv':
+                    document.getElementById(fieldId).value = Math.floor(100 + Math.random() * 900).toString();
+                    break;
+                case 'cardholder_firstname':
+                    document.getElementById(fieldId).value = translateToLatin('Иван');
+                    break;
+                case 'cardholder_lastname':
+                    document.getElementById(fieldId).value = translateToLatin('Иванов');
+                    break;
+                case 'card_limit':
+                    document.getElementById(fieldId).value = '10000';
+                    break;
+                case 'card_balance':
+                    document.getElementById(fieldId).value = '5000';
+                    break;
+                case 'last_usage_date':
+                    document.getElementById(fieldId).value = new Date().toISOString().split('T')[0];
+                    break;
+                default:
+                    break;
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Генерация тестовых данных</h1>
+
+        <h2>Создать пользователя</h2>
+        <form id="user-form" class="form">
+            <label for="phone">Номер телефона (обязательно):</label>
+            <input type="text" id="phone" name="phone" required>
+            <label for="email">Email (обязательно):</label>
+            <input type="email" id="email" name="email" required>
+            <label for="password">Пароль (обязательно):</label>
+            <input type="password" id="password" name="password" required>
+            <label for="confirmed">Подтвержден:</label>
+            <input type="checkbox" id="confirmed" name="confirmed">
+            <label for="first_name">Имя:</label>
+            <input type="text" id="first_name" name="first_name">
+            <label for="last_name">Фамилия:</label>
+            <input type="text" id="last_name" name="last_name">
+            <button type="button" onclick="generateUser()">Создать пользователя</button>
+        </form>
+        <pre id="user-result" class="result"></pre>
+
+        <h2>Создать карту</h2>
+        <form id="card-form" class="form">
+            <label for="phone-card">Номер телефона пользователя (обязательно):</label>
+            <input type="text" id="phone-card" name="phone" required onblur="fillUserNames(this.value)">
+            <label for="card_type">Тип карты (обязательно):</label>
+            <select id="card_type" name="card_type" required>
+                <option value="Visa">Visa</option>
+                <option value="MasterCard">MasterCard</option>
+                <option value="UnionPay">UnionPay</option>
+                <option value="МИР" selected>МИР</option>
+            </select>
+            <label for="expiration_date">Дата истечения (обязательно):</label>
+            <input type="date" id="expiration_date" name="expiration_date" required>
+            <button type="button" onclick="autoGenerate('expiration_date')">Автогенерация</button>
+            <label for="cvv">CVV (обязательно):</label>
+            <input type="text" id="cvv" name="cvv" required>
+            <button type="button" onclick="autoGenerate('cvv')">Автогенерация</button>
+            <label for="cardholder_firstname">Имя владельца карты (обязательно):</label>
+            <input type="text" id="cardholder_firstname" name="cardholder_firstname" required>
+            <button type="button" onclick="autoGenerate('cardholder_firstname')">Автогенерация</button>
+            <label for="cardholder_lastname">Фамилия владельца карты (обязательно):</label>
+            <input type="text" id="cardholder_lastname" name="cardholder_lastname" required>
+            <button type="button" onclick="autoGenerate('cardholder_lastname')">Автогенерация</button>
+            <label for="card_category">Категория карты (обязательно):</label>
+            <select id="card_category" name="card_category" required>
+                <option value="debit">Дебетовая</option>
+                <option value="credit">Кредитная</option>
+            </select>
+            <label for="card_status">Статус карты (обязательно):</label>
+            <select id="card_status" name="card_status" required>
+                <option value="blocked">Заблокирована</option>
+                <option value="Active" selected>Активна</option>
+                <option value="In Progress">В процессе</option>
+                <option value="Wait Activation">Ожидает активации</option>
+            </select>
+            <label for="currency">Валюта (обязательно):</label>
+            <select id="currency" name="currency" required>
+                <option value="USD">USD</option>
+                <option value="RUB" selected>RUB</option>
+                <option value="EUR">EUR</option>
+                <option value="CNY">CNY</option>
+            </select>
+            <label for="card_limit">Лимит карты:</label>
+            <input type="number" id="card_limit" name="card_limit">
+            <button type="button" onclick="autoGenerate('card_limit')">Автогенерация</button>
+            <label for="card_balance">Баланс карты (обязательно):</label>
+            <input type="number" id="card_balance" name="card_balance" required>
+            <button type="button" onclick="autoGenerate('card_balance')">Автогенерация</button>
+            <label for="last_usage_date">Дата последнего использования:</label>
+            <input type="date" id="last_usage_date" name="last_usage_date">
+            <button type="button" onclick="autoGenerate('last_usage_date')">Автогенерация</button>
+            <button type="button" onclick="generateCard()">Создать карту</button>
+        </form>
+        <pre id="card-result" class="result"></pre>
+
+        <h2>Создать транзакцию</h2>
+        <form id="transaction-form" class="form">
+            <label for="card_number">Номер карты (обязательно):</label>
+            <input type="text" id="card_number" name="card_number" required>
+            <label for="transaction_date">Дата транзакции:</label>
+            <input type="datetime-local" id="transaction_date" name="transaction_date">
+            <label for="amount">Сумма:</label>
+            <input type="number" id="amount" name="amount">
+            <label for="transaction_type">Тип транзакции:</label>
+            <select id="transaction_type" name="transaction_type">
+                <option value="buy">Покупка</option>
+                <option value="top-up">Пополнение</option>
+            </select>
+            <label for="transaction_status">Статус транзакции:</label>
+            <select id="transaction_status" name="transaction_status">
+                <option value="Executed">Выполнена</option>
+                <option value="Rejected">Отклонена</option>
+                <option value="Pending">В ожидании</option>
+                <option value="Draft">Черновик</option>
+            </select>
+            <label for="transaction_description">Описание транзакции:</label>
+            <input type="text" id="transaction_description" name="transaction_description">
+            <button type="button" onclick="generateTransaction()">Создать транзакцию</button>
+        </form>
+        <pre id="transaction-result" class="result"></pre>
+
+        <h2>Генерация всех данных</h2>
+        <button type="button" onclick="generateAll()">Генерация всех данных</button>
+        <pre id="all-result" class="result"></pre>
+    </div>
+</body>
+</html>
