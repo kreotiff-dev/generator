@@ -58,20 +58,27 @@ def generate_user(request):
 
 
 def generate_card(request):
-    phone = request.form.get('phone')
-    card_type = request.form.get('card_type')
+    data = request.get_json()
+    phone = request.form.get('phone') or data.get('phone')
+    card_type = request.form.get('card_type') or data.get('card_type')
     card_number = request.form.get('card_number') or generate_card_number()
     expiration_date = request.form.get('expiration_date') or (datetime.now() + timedelta(days=365 * 3)).strftime(
         '%Y-%m-%d')
     cvv = request.form.get('cvv') or generate_cvv()
-    cardholder_firstname = request.form.get('cardholder_firstname')
-    cardholder_lastname = request.form.get('cardholder_lastname')
-    card_category = request.form.get('card_category')
-    card_status = request.form.get('card_status')
-    currency = request.form.get('currency')
+    cardholder_firstname = request.form.get('cardholder_firstname') or data.get('cardholder_firstname')
+    cardholder_lastname = request.form.get('cardholder_lastname') or data.get('cardholder_lastname')
+    card_category = request.form.get('card_category') or data.get('card_category')
+    card_status = request.form.get('card_status') or "Active"
+    currency = request.form.get('currency') or data.get('currency')
     card_limit = request.form.get('card_limit') or None
-    card_balance = request.form.get('card_balance') or None
+    card_balance = request.form.get('card_balance') or data.get('card_balance')
     last_usage_date = request.form.get('last_usage_date') or None
+    request_id = request.form.get('request_id') or data.get('card_request_id')
+
+    print(f"В функции генерации карты: {phone}")
+    print(f"Полученный request_id: {request_id}")
+
+    print(f"Полученные данные для генерации карты: {data}")
 
     user_info = get_user_by_phone(phone)
     if user_info:
@@ -83,7 +90,10 @@ def generate_card(request):
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        c.execute("SELECT id FROM users WHERE phone = %s", (phone,))
+        query = "SELECT id FROM users WHERE phone = %s"
+
+        print(f"Executing query: {query % (repr(phone),)}")
+        c.execute(query, (phone,))
         user = c.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -97,6 +107,12 @@ def generate_card(request):
         """, (user_id, card_number, expiration_date, cvv, cardholder_firstname, cardholder_lastname, card_type,
               card_category, card_status, currency, card_limit, card_balance, last_usage_date))
         card_id = c.fetchone()[0]
+        if request_id:
+            c.execute("""
+                        UPDATE card_requests
+                        SET card_id = %s
+                        WHERE id = %s
+                    """, (card_id, request_id))
         conn.commit()
     except psycopg2.Error as e:
         conn.rollback()
