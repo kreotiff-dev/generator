@@ -1,5 +1,11 @@
 from flask import Flask, render_template, request, jsonify
-from handlers import generate_user, generate_card, generate_transaction, generate_all, get_user_by_phone
+from config.logging_config import setup_logging
+from app.controllers.user_controller import generate_user, get_user_by_phone
+from app.controllers.card_controller import generate_card
+from app.controllers.transaction_controller import generate_transaction
+from app.controllers.general_controller import generate_all
+
+setup_logging()
 
 app = Flask(__name__)
 
